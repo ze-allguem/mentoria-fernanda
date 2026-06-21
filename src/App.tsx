@@ -31,7 +31,7 @@ function getRouteFromHash(): Route {
 export default function App() {
   const [route, setRoute] = useState<Route>(getRouteFromHash());
   const redirecting = useRef(false);
-  const activityTimer = useRef<ReturnType<typeof setTimeout>>();
+  const activityTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     const onHashChange = () => setRoute(getRouteFromHash());
