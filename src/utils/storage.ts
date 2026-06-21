@@ -1,5 +1,7 @@
 import { FormData, Student, Receipt } from '../types';
 import { saveStudents, saveReceipts, loadStudents, loadReceipts } from '../services/database';
+import { auth, googleProvider } from '../lib/firebase';
+import { signInWithPopup, signOut } from 'firebase/auth';
 
 const KEYS = {
   FORM_DRAFT: 'mentoria_form_draft',
@@ -74,6 +76,42 @@ function clearAuth(): void {
   localStorage.removeItem(KEYS.AUTH);
   localStorage.removeItem(KEYS.ROLE);
   localStorage.removeItem(KEYS.LAST_ACTIVITY);
+}
+
+/* ---------- Google Auth ---------- */
+
+const ALLOWED_USERS: { email: string; role: UserRole }[] = [
+  { email: 'josealves606@gmail.com', role: 'admin' },
+  { email: 'fernandavargas123', role: 'viewer' },
+];
+
+export async function signInWithGoogle(): Promise<{ success: boolean; error?: string }> {
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    const email = result.user.email?.toLowerCase();
+    if (!email) {
+      await signOut(auth);
+      return { success: false, error: 'Não foi possível obter o email da conta Google.' };
+    }
+    const allowed = ALLOWED_USERS.find((u) => email === u.email);
+    if (!allowed) {
+      await signOut(auth);
+      return { success: false, error: 'Email não autorizado. Apenas administradores podem acessar.' };
+    }
+    setMentorAuth(true, allowed.role);
+    return { success: true };
+  } catch (err: unknown) {
+    const error = err as { code?: string; message?: string };
+    if (error.code === 'auth/popup-closed-by-user') {
+      return { success: false, error: '' };
+    }
+    return { success: false, error: error.message || 'Erro ao autenticar com Google.' };
+  }
+}
+
+export async function signOutGoogle(): Promise<void> {
+  await signOut(auth);
+  clearAuth();
 }
 
 /* ---------- Seed ---------- */
